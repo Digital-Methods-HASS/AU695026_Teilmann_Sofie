@@ -1,0 +1,243 @@
+
+dir.create("data")
+dir.create("fig_output")
+read.csv("data/census-1845-normalized.csv")
+
+install.packages("rmarkdown")
+
+
+install.packages("tidyverse")
+library(dplyr)
+library(ggplot2)
+
+
+# FIRST DATA SET
+
+census1845 <- read.csv("data/census-1845-normalized.csv")
+
+census1845_clean <- census1845 %>%
+  filter(age != "", !is.na(age))
+
+glimpse(census1845_clean)
+
+filtered_data_1845 <- census1845_clean %>%
+  filter(gender == "kvinde", age >= 20, age < 30)
+
+married_count_1845 <- filtered_data_1845 %>% filter(marital_status == "gift") %>% nrow()
+unmarried_count_1845 <- filtered_data_1845 %>% filter(marital_status == "ugift") %>% nrow()
+widowed_count_1845 <- filtered_data_1845 %>% filter(marital_status == "enke") %>% nrow()
+
+ratio_1845 <- married_count_1845 / unmarried_count_1845
+print(paste("Ratio of married to unmarried women:", ratio_1845))
+
+
+# SECOND DATA SET
+
+census1860 <- read.csv("data/census-1860-normalized.csv")
+
+census1860_clean <- census1860 %>%
+  filter(alder != "", !is.na(alder))
+
+glimpse(census1860_clean)
+
+census1860_clean <- census1860_clean %>%
+  rename(gender = koen)
+
+census1860_clean <- census1860_clean %>%
+  rename(age = alder)
+
+census1860_clean <- census1860_clean %>%
+  rename(marital_status = civilstand)
+
+filtered_data_1860 <- census1860_clean %>%
+  filter(gender == "kvinde", age >= 20, age < 30)
+
+married_count_1860 <- filtered_data_1860 %>% filter(marital_status == "gift") %>% nrow()
+unmarried_count_1860 <- filtered_data_1860 %>% filter(marital_status == "ugift") %>% nrow()
+widowed_count_1860 <- filtered_data_1860 %>% filter(marital_status == "enke") %>% nrow()
+
+ratio_1860 <- married_count_1860 / unmarried_count_1860
+print(paste("Ratio of married to unmarried women:", ratio_1860))
+
+
+# Earliest age when women are married 1845
+
+age_of_interest_1845 <- 18 # when typing 16, only one girl shows up and it says she lives with her
+# parents and not a spouse so i'm inclined to believe this is just a mistake in the date set and
+# she is not actually married
+
+count_married_women_age_1845 <- census1845_clean %>%
+  filter(marital_status == "gift", gender == "kvinde", age == age_of_interest_1845) %>%
+  summarise(count = n())
+
+print(count_married_women_age_1845)
+
+
+specific_women_1845 <- census1845_clean %>%
+  filter(gender == "kvinde", marital_status == "gift", age == age_of_interest_1845)
+
+print(specific_women_1845)
+
+
+min_age_married_1845 <- census1845_clean %>%
+  filter(marital_status == "gift", gender == "kvinde", age >= 18) %>% # exclude ages below 18
+  summarise(min_age = min(age, na.rm = TRUE))
+
+print(min_age_married_1845)
+
+
+# Earliest age when women are married 1860
+
+age_of_interest_1860 <- 16 #it is more believable that the women shown as 16yo are actually married
+
+count_married_women_age_1860 <- census1860_clean %>%
+  filter(marital_status == "gift", gender == "kvinde", age == age_of_interest_1860) %>%
+  summarise(count = n())
+
+print(count_married_women_age_1860)
+
+
+specific_women_1860 <- census1860_clean %>%
+  filter(gender == "kvinde", marital_status == "gift", age == age_of_interest_1860)
+
+print(specific_women_1860)
+
+
+min_age_married_1860 <- census1860_clean %>%
+  filter(marital_status == "gift", gender == "kvinde", age >= 16) %>% # exclude ages below 16
+  summarise(min_age = min(age, na.rm = TRUE))
+
+print(min_age_married_1860)
+
+
+# Age when most women are married 1845
+
+most_common_age_1845 <- census1845_clean %>%
+  filter(marital_status == "gift", gender == "kvinde") %>%
+  count(age) %>%
+  arrange(desc(n)) %>%
+  slice(1)
+
+print(most_common_age_1845)
+
+
+#visual
+census1845_clean %>%
+  filter(marital_status == "gift", gender == "kvinde") %>%
+  ggplot(aes(x = age)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+  labs(title = "Age distribution of married women (marital_status == 'gift')", x = "Age", y = "Count")
+
+
+
+# Age when most women are married 1860
+
+most_common_age_1860 <- census1860_clean %>%
+  filter(marital_status == "gift", gender == "kvinde") %>%
+  count(age) %>%
+  arrange(desc(n)) %>%
+  slice(1)
+
+print(most_common_age_1860)
+
+
+#visual
+
+census1860_clean %>%
+  filter(marital_status == "gift", gender == "kvinde") %>%
+  ggplot(aes(x = age)) +
+  geom_histogram(binwidth = 1, fill = "lightgreen", color = "black") +
+  labs(title = "Age distribution of married women (marital_status == 'gift')", x = "Age", y = "Count")
+
+
+# Fraction of women who stay single 1845
+
+fraction_single_women_1845 <- census1845_clean %>%
+  filter(gender == "kvinde") %>%
+  summarise(
+    total_women = n(),
+    single_women = sum(marital_status == "ugift", na.rm = TRUE),
+    fraction_single = single_women / total_women
+  )
+
+print(fraction_single_women_1845)
+
+
+fraction_single_above_18_1845 <- census1845_clean %>%
+  filter(gender == "kvinde", age >= 18, age <= 100) %>%
+  summarise(
+    total_women = n(),
+    single_women = sum(marital_status == "ugift", na.rm = TRUE),
+    fraction_single = single_women / total_women
+  )
+
+print(fraction_single_above_18_1845)
+
+
+# this shows that women between ages 18-29 are 80% single which accounts for the big fraction of singles overall
+census1845_clean %>%
+  filter(gender == "kvinde", age >= 18, age <= 100) %>%
+  mutate(age_group = case_when(
+    age >= 18 & age < 30 ~ "18-29",
+    age >= 30 & age < 40 ~ "30-39",
+    age >= 40 & age < 50 ~ "40-49",
+    age >= 50 & age < 60 ~ "50-59",
+    age >= 60 & age < 70 ~ "60-69",
+    age >= 70 & age < 80 ~ "70-79",
+    age >= 80 & age <= 100 ~ "80-100",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(age_group)) %>%
+  group_by(age_group) %>%
+  summarise(
+    total = n(),
+    single = sum(marital_status == "ugift", na.rm = TRUE),
+    fraction_single = single / total
+  )
+
+
+# Fraction of women who stay single 1860
+
+fraction_single_women_1860 <- census1860_clean %>%
+  filter(gender == "kvinde") %>%
+  summarise(
+    total_women = n(),
+    single_women = sum(marital_status == "ugift", na.rm = TRUE),
+    fraction_single = single_women / total_women
+  )
+
+print(fraction_single_women_1860)
+
+
+fraction_single_above_16_1860 <- census1860_clean %>%
+  filter(gender == "kvinde", age >= 16, age <= 100) %>%
+  summarise(
+    total_women = n(),
+    single_women = sum(marital_status == "ugift", na.rm = TRUE),
+    fraction_single = single_women / total_women
+  )
+
+print(fraction_single_above_16_1860)
+
+
+# this shows that women between ages 16-29 are 76% single which accounts for the big fraction of singles overall
+census1860_clean %>%
+  filter(gender == "kvinde", age >= 16, age <= 100) %>%
+  mutate(age_group = case_when(
+    age >= 16 & age < 30 ~ "18-29",
+    age >= 30 & age < 40 ~ "30-39",
+    age >= 40 & age < 50 ~ "40-49",
+    age >= 50 & age < 60 ~ "50-59",
+    age >= 60 & age < 70 ~ "60-69",
+    age >= 70 & age < 80 ~ "70-79",
+    age >= 80 & age <= 100 ~ "80-100",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(age_group)) %>%
+  group_by(age_group) %>%
+  summarise(
+    total = n(),
+    single = sum(marital_status == "ugift", na.rm = TRUE),
+    fraction_single = single / total
+  )
+
